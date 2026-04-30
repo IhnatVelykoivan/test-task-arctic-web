@@ -7,8 +7,24 @@ import type {
   UpdateLeadInput,
 } from './types';
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api';
+const DEFAULT_API_BASE = 'http://localhost:3001/api';
+
+// Server-side requests (Server Components, Route Handlers) and client-side
+// requests need different URLs in Docker: the browser cannot resolve the
+// compose service name `backend`, while the frontend container cannot reach
+// the backend via `localhost`. NEXT_PUBLIC_* is inlined at build time and
+// shipped to the browser; API_BASE_URL is a regular runtime env var only the
+// server reads.
+function apiBase(): string {
+  if (typeof window === 'undefined') {
+    return (
+      process.env.API_BASE_URL ??
+      process.env.NEXT_PUBLIC_API_URL ??
+      DEFAULT_API_BASE
+    );
+  }
+  return process.env.NEXT_PUBLIC_API_URL ?? DEFAULT_API_BASE;
+}
 
 export class ApiError extends Error {
   constructor(
@@ -25,7 +41,7 @@ async function request<T>(
   path: string,
   init: RequestInit = {},
 ): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(`${apiBase()}${path}`, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
