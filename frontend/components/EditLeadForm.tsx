@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api, ApiError } from '@/lib/api';
 import {
   LEAD_STATUSES,
@@ -12,31 +12,49 @@ import {
 } from '@/lib/types';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const SAVED_BANNER_MS = 2500;
 
 interface Props {
   lead: Lead;
 }
 
-export function EditLeadForm({ lead }: Props) {
-  const router = useRouter();
-  const [form, setForm] = useState({
+interface FormState {
+  name: string;
+  email: string;
+  company: string;
+  status: LeadStatus;
+  value: string;
+  notes: string;
+}
+
+function leadToForm(lead: Lead): FormState {
+  return {
     name: lead.name,
     email: lead.email ?? '',
     company: lead.company ?? '',
     status: lead.status,
-    value: lead.value ?? '',
+    value: lead.value === null ? '' : String(lead.value),
     notes: lead.notes ?? '',
-  });
+  };
+}
+
+export function EditLeadForm({ lead }: Props) {
+  const router = useRouter();
+  const [form, setForm] = useState<FormState>(() => leadToForm(lead));
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [saved, setSaved] = useState(false);
 
-  function update<K extends keyof typeof form>(
-    key: K,
-    value: (typeof form)[K],
-  ) {
+  useEffect(() => {
+    if (!saved) return;
+    const t = setTimeout(() => setSaved(false), SAVED_BANNER_MS);
+    return () => clearTimeout(t);
+  }, [saved]);
+
+  function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }));
+    if (saved) setSaved(false);
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -52,22 +70,20 @@ export function EditLeadForm({ lead }: Props) {
       return;
     }
 
+    const trimmedValue = form.value.trim();
     const payload: UpdateLeadInput = {
       name: form.name.trim(),
       email: form.email.trim() || undefined,
       company: form.company.trim() || undefined,
       status: form.status,
       notes: form.notes.trim() || undefined,
-      value:
-        form.value === '' || form.value === null
-          ? undefined
-          : Number(form.value),
+      value: trimmedValue === '' ? undefined : Number(trimmedValue),
     };
 
     setSubmitting(true);
     try {
       await api.updateLead(lead.id, payload);
-      setSavedAt(Date.now());
+      setSaved(true);
       router.refresh();
     } catch (err) {
       setError(
@@ -157,8 +173,10 @@ export function EditLeadForm({ lead }: Props) {
           {error}
         </p>
       )}
-      {savedAt && !error && (
-        <p className="text-sm text-emerald-600">Saved.</p>
+      {saved && !error && (
+        <p className="text-sm text-emerald-600" role="status">
+          Saved.
+        </p>
       )}
 
       <div className="flex justify-between">
