@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { CreateLeadForm } from '@/components/CreateLeadForm';
+import { DeleteLeadButton } from '@/components/DeleteLeadButton';
 import { LeadsFilters } from '@/components/LeadsFilters';
 import { Pagination } from '@/components/Pagination';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -109,6 +110,7 @@ export default async function LeadsPage({ searchParams }: PageProps) {
                 <Th>Status</Th>
                 <Th className="text-right">Value</Th>
                 <Th>Created</Th>
+                <Th className="text-right">Actions</Th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
@@ -136,6 +138,9 @@ export default async function LeadsPage({ searchParams }: PageProps) {
                   </td>
                   <td className="px-4 py-3 text-slate-500">
                     {formatDate(lead.createdAt)}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <DeleteLeadButton id={lead.id} name={lead.name} />
                   </td>
                 </tr>
               ))}
