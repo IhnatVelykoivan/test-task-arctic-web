@@ -100,12 +100,18 @@ export function EditLeadForm({ lead }: Props) {
     setError(null);
     try {
       await api.deleteLead(lead.id);
-      router.push('/leads');
       router.refresh();
+      router.replace('/leads');
     } catch (err) {
-      setError(
-        err instanceof ApiError ? err.message : 'Failed to delete lead',
-      );
+      // eslint-disable-next-line no-console
+      console.error('[delete lead]', err);
+      const message =
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? `Failed to delete lead: ${err.message}`
+            : 'Failed to delete lead';
+      setError(message);
       setDeleting(false);
     }
   }
